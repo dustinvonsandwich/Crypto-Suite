@@ -8,6 +8,12 @@
 # Therefore this tool should be considered for acedemic purposes only
 # in its current state.
 
+# Functions come in pairs of encrypt and decryption, one function
+# will generate a file for output, while the other will perform the
+# actual encryption/decryption. So each algo used here has 4 functions
+# to go with it. 
+
+
 # Author: Dustin Ray
 # TCSS 581
 # Spring 2020
