@@ -1,3 +1,18 @@
+# A simple interface to pycrypto that accepts a text file as input
+# and outputs an encrypted and decrypted version of the text file
+# using the specified algorithm. DES and 3DES CTR modes do not
+# decrypt properly because they are using random counters instead
+# of the same counter used to encrypt. 
+# Some IVs used in this interface
+# are not random and will render the CBC encryption as insecure. 
+# Therefore this tool should be considered for acedemic purposes only
+# in its current state.
+
+# Author: Dustin Ray
+# TCSS 581
+# Spring 2020
+
+
 import base64
 import hashlib
 import os
@@ -12,9 +27,14 @@ import Crypto
 import binascii
 
 
+# main function defines keys to use for various algorithms.
+# contains calls to encryption and decryption functions, and
+# provides runtimes in Seconds for each call.
+
 def main():
 
     key32 = b'\xbf\xc0\x85)\x10nc\x94\x02)j\xdf\xcb\xc4\x94\x9d(\x9e[EX\xc8\xd5\xbfI{\xa2$\x05(\xd5\x18'
+    key24 = b'\xbf\xc0\xbf\xc0\xbf\xc0\xbf\xc0\xbf\xc0\xbf\xc0\xbf\xc0\xbf\xc0'
     key8 = b'\xbf\xc0\xbf\xc0\xbf\xc0\xbf\xc0'
 
 
@@ -57,13 +77,50 @@ def main():
     decrypt_file_DES_CTR("bible.DES_ENC_CTR", key8)
     time9 = time.time()
     print("Elapsed time to decrypt using DES in CTR mode: " + str(time9 - time8) + " Seconds")
+
+
+
+    #encrypt with DES in CBC mode
+    time6 = time.time()
+    encrypt_file_DES_CBC("bible.txt", key8)
+    time7 = time.time()
+    print("Elapsed time to encrypt using DES in CBC mode: " + str(time7 - time6) + " Seconds")
+
+    #decrypt with DES in CBC mode
+    time8 = time.time()
+    decrypt_file_DES_CBC("bible.DES_ENC_CBC", key8)
+    time9 = time.time()
+    print("Elapsed time to decrypt using DES in CBC mode: " + str(time9 - time8) + " Seconds")
+
+    #encrypt with DES3 in CBC mode
+    time6 = time.time()
+    encrypt_file_DES3_CBC("bible.txt", key24)
+    time7 = time.time()
+    print("Elapsed time to encrypt using DES3 in CBC mode: " + str(time7 - time6) + " Seconds")
+
+    #decrypt with DES3 in CBC mode
+    time8 = time.time()
+    decrypt_file_DES3_CBC("bible.DES3_ENC_CBC", key24)
+    time9 = time.time()
+    print("Elapsed time to decrypt using DES3 in CBC mode: " + str(time9 - time8) + " Seconds")
+
+    #encrypt with DES3 in CTR mode
+    time6 = time.time()
+    encrypt_file_DES3_CTR("bible.txt", key24)
+    time7 = time.time()
+    print("Elapsed time to encrypt using DES3 in CTR mode: " + str(time7 - time6) + " Seconds")
+
+    #decrypt with DES3 in CTR mode
+    time8 = time.time()
+    decrypt_file_DES3_CTR("bible.DES3_ENC_CTR", key24)
+    time9 = time.time()
+    print("Elapsed time to decrypt using DES3 in CTR mode: " + str(time9 - time8) + " Seconds")
     
 
-
+# pad function for AES algos. Brings block size to required block size
+# by AES.
 def pad(s):
     return s + b"\0" * (AES.block_size - len(s) % AES.block_size)
-
-
 
 
 def encrypt_file_AES_CBC(file_name, key):
@@ -166,6 +223,97 @@ def decrypt_DES_CTR(ciphertext, key):
     return plaintext
 
 
+def encrypt_file_DES_CBC(file_name, key):
+    with open(file_name, 'rb') as fo:
+        plaintext = fo.read()
+    enc = encrypt_DES_CBC(plaintext, key)
+    with open("bible.DES_ENC_CBC", 'wb') as fo:
+        fo.write(enc)
+
+def encrypt_DES_CBC(message, key, key_size=256):
+    
+    message = pad(message)
+    iv = Random.new().read(DES.block_size)
+    cipher = DES.new(key, DES.MODE_CBC, iv)
+    return iv + cipher.encrypt(message)
+
+def decrypt_file_DES_CBC(file_name, key):
+    with open(file_name, 'rb') as fo:
+        ciphertext = fo.read()
+    dec = decrypt_DES_CBC(ciphertext, key)
+    with open("bible.DES_DEC_CBC", 'wb') as fo:
+        fo.write(dec)
+
+def decrypt_DES_CBC(ciphertext, key):
+    iv = ciphertext[:DES.block_size]
+    cipher = DES.new(key, DES.MODE_CBC, iv)
+    plaintext = cipher.decrypt(ciphertext[DES.block_size:])
+    return plaintext.rstrip(b"\0")
+
+def encrypt_file_DES3_CBC(file_name, key):
+    with open(file_name, 'rb') as fo:
+        plaintext = fo.read()
+    enc = encrypt_DES3_CBC(plaintext, key)
+    with open("bible.DES3_ENC_CBC", 'wb') as fo:
+        fo.write(enc)
+
+def encrypt_DES3_CBC(message, key):
+    
+    message = pad(message)
+    iv = Random.new().read(DES3.block_size)
+    cipher = DES3.new(key, DES3.MODE_CBC, iv)
+    return iv + cipher.encrypt(message)
+
+def decrypt_file_DES3_CBC(file_name, key):
+    with open(file_name, 'rb') as fo:
+        ciphertext = fo.read()
+    dec = decrypt_DES3_CBC(ciphertext, key)
+    with open("bible.DES3_DEC_CBC", 'wb') as fo:
+        fo.write(dec)
+
+def decrypt_DES3_CBC(ciphertext, key):
+    iv = ciphertext[:DES3.block_size]
+    cipher = DES3.new(key, DES3.MODE_CBC, iv)
+    plaintext = cipher.decrypt(ciphertext[DES3.block_size:])
+    return plaintext.rstrip(b"\0")
+
+
+
+def encrypt_file_DES3_CTR(file_name, key):
+    with open(file_name, 'rb') as fo:
+        plaintext = fo.read()
+    enc = encrypt_DES3_CTR(plaintext, key)
+    with open("bible.DES3_ENC_CTR", 'wb') as fo:
+        fo.write(enc)
+
+
+def encrypt_DES3_CTR(message, key):
+    
+    nonce = Random.get_random_bytes(4)
+    ctr = Counter.new(32, prefix=nonce)
+    cipher = DES3.new(key, DES3.MODE_CTR,counter=ctr)
+    encrypted = cipher.encrypt(message)
+    return encrypted
+
+
+def decrypt_file_DES3_CTR(file_name, key):
+    
+    with open(file_name, 'rb') as fo:
+        ciphertext = fo.read()
+    dec = decrypt_DES3_CTR(ciphertext, key)
+    with open("bible.DES3_DEC_CTR", 'wb') as fo:
+        fo.write(dec)
+
+
+def decrypt_DES3_CTR(ciphertext, key):
+    
+    nonce = Random.get_random_bytes(4)
+    ctr = Counter.new(32, prefix=nonce)
+
+    cipher = DES3.new(key, DES3.MODE_CTR, counter=ctr)
+    plaintext = cipher.decrypt(ciphertext)
+    return plaintext
+    
 
 
 main()
